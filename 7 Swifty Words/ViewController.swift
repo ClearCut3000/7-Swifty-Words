@@ -18,11 +18,15 @@ class ViewController: UIViewController {
 
   var activatedButtons = [UIButton]()
   var solutions = [String]()
-  var score = 0{
+  var score = 0 {
     didSet {
+      if score < 0 {
+        self.score = 0
+      }
       scoreLabel.text = "Score: \(score)"
     }
   }
+  var correctAnswers = 0
   var level = 1
 
   //MARK: - ViewController lifecycle
@@ -64,14 +68,18 @@ class ViewController: UIViewController {
 
     let submitButton = UIButton(type: .system)
     submitButton.translatesAutoresizingMaskIntoConstraints = false
-    submitButton.setTitle("SUBMIT", for: .normal)
+    submitButton.setTitle(" SUBMIT ", for: .normal)
     submitButton.addTarget(self, action: #selector(submitTapped), for: .touchUpInside)
+    submitButton.layer.cornerRadius = 5
+    submitButton.layer.borderWidth = 1
     view.addSubview(submitButton)
 
     let clearButton = UIButton(type: .system)
     clearButton.translatesAutoresizingMaskIntoConstraints = false
-    clearButton.setTitle("CLEAR", for: .normal)
+    clearButton.setTitle(" CLEAR ", for: .normal)
     clearButton.addTarget(self, action: #selector(clearTapped), for: .touchUpInside)
+    clearButton.layer.cornerRadius = 5
+    clearButton.layer.borderWidth = 1
     view.addSubview(clearButton)
 
     let buttonsView = UIView()
@@ -115,6 +123,8 @@ class ViewController: UIViewController {
         letterButton.addTarget(self, action: #selector(letterTapped), for: .touchUpInside)
         let frame = CGRect(x: column * width, y: row * height, width: width, height: height)
         letterButton.frame = frame
+        letterButton.layer.cornerRadius = 5
+        letterButton.layer.borderWidth = 1
         buttonsView.addSubview(letterButton)
         letterButtons.append(letterButton)
       }
@@ -145,19 +155,30 @@ class ViewController: UIViewController {
       answersLabel.text = splitAnswers?.joined(separator: "\n")
       currentAnswer.text = ""
       score += 1
+      correctAnswers += 1
 
-      if score % 7 == 0 {
-        let alert = UIAlertController(title: "Well done!", message: "Are you ready for next level?", preferredStyle: .actionSheet)
+      if correctAnswers == 7 {
+        let alert = UIAlertController(title: "Well done!", message: "Are you ready for next level?", preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "Lets go!", style: .default, handler: levelUp))
         present(alert, animated: true)
       }
+    } else {
+      let alert = UIAlertController(title: "You'we done mistake, partner!", message: "Try another way.", preferredStyle: .alert)
+      alert.addAction(UIAlertAction(title: "Ok", style: .default, handler: nil))
+      score -= 1
+      currentAnswer.text = ""
+      for button in activatedButtons {
+        button.isHidden = false
+      }
+      present(alert, animated: true)
     }
   }
 
   private func levelUp(action: UIAlertAction){
-    level += 1
+    level == 1 ? (level += 1) : (level = 1)
     solutions.removeAll(keepingCapacity: true)
     loadLevel()
+    correctAnswers = 0
     for button in letterButtons {
       button.isHidden = false
     }
@@ -179,7 +200,7 @@ class ViewController: UIViewController {
     if let levelFileURL = Bundle.main.url(forResource: "level\(level)", withExtension: "txt"){
       if let levelContents = try? String(contentsOf: levelFileURL){
         var lines = levelContents.components(separatedBy: "\n")
-        lines .shuffle()
+        lines.shuffle()
         for (index, line) in lines.enumerated() {
           let parts = line.components(separatedBy: ": ")
           let answer = parts[0]
